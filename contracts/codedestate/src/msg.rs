@@ -64,21 +64,15 @@ pub enum ExecuteMsg<T, E> {
         extension: T,
     },
 
-    ///
-    // List {
-    //     token_id:String,
-    //     price:u64,
-    //     expires: Option<Expiration>,
-    // },
-
-    SetPrice {
+    SetMetadata {
         token_id:String,
-        price:u64,
+        token_uri:String,
     },
 
     SetListing {
         token_id:String,
         islisted:bool,
+        price:u64,
     },
 
     Bid {

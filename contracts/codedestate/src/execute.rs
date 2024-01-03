@@ -4,11 +4,11 @@ use serde::Serialize;
 
 use cosmwasm_std::{Binary, CustomMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
-use cw721::{ContractInfoResponse, Cw721Execute, Cw721ReceiveMsg, Expiration};
+use cw721::{ContractInfoResponse, Cw721Execute, Cw721ReceiveMsg, Bid,Expiration};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
-use crate::state::{Approval,Bid, Cw721Contract, TokenInfo};
+use crate::state::{Approval, Cw721Contract, TokenInfo};
 
 impl<'a, T, C, E, Q> Cw721Contract<'a, T, C, E, Q>
 where
@@ -50,15 +50,21 @@ where
                 extension,
             } => self.mint(deps, info, token_id, owner, token_uri, extension),
 
-            ExecuteMsg::SetPrice{
+            // ExecuteMsg::SetPrice{
+            //     token_id,
+            //     price,
+            // } => self.setprice(deps, env, info, token_id, price),
+
+            ExecuteMsg::SetMetadata{
                 token_id,
-                price,
-            } => self.setprice(deps, env, info, token_id, price),
+                token_uri,
+            } => self.setmetadata(deps, env, info, token_id, token_uri),
 
             ExecuteMsg::SetListing{
                 token_id,
                 islisted,
-            } => self.setlisting(deps, env, info, token_id, islisted),
+                price,
+            } => self.setlisting(deps, env, info, token_id, islisted, price),
 
 
             ExecuteMsg::Bid{
@@ -361,6 +367,35 @@ where
             .add_attribute("token_id", token_id))
     }
 
+
+    pub fn setmetadata(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        token_id: String,
+        token_uri:String,
+        // expires: Option<Expiration>,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        // ensure we have permissions
+        self.check_can_send(deps.as_ref(), &env, &info, &token)?;
+
+        token.token_uri = Some(token_uri);
+        // token.islisted = true;
+        self.tokens.save(deps.storage, &token_id, &token)?;
+
+        // let spender_addr = env.contract.address.clone();
+        // let spender = spender_addr.to_string();
+        
+        // self._update_approvals(deps, &env, &info, &spender, &token_id, true, expires)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "setmetadata")
+            .add_attribute("sender", info.sender)
+            .add_attribute("token_id", token_id))
+    }
+
     pub fn setlisting(
         &self,
         deps: DepsMut,
@@ -368,6 +403,7 @@ where
         info: MessageInfo,
         token_id: String,
         islisted:bool,
+        price:u64,
         // expires: Option<Expiration>,
     ) -> Result<Response<C>, ContractError> {
         let mut token = self.tokens.load(deps.storage, &token_id)?;
@@ -376,6 +412,7 @@ where
 
         // token.price = price;
         token.islisted = islisted;
+        token.price = price;
         self.tokens.save(deps.storage, &token_id, &token)?;
 
         // let spender_addr = env.contract.address.clone();

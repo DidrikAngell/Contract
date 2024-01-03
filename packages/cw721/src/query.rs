@@ -73,6 +73,7 @@ pub enum Cw721QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
+
 }
 
 #[cw_serde]
@@ -89,6 +90,14 @@ pub struct Approval {
     pub spender: String,
     /// When the Approval expires (maybe Expiration::never)
     pub expires: Expiration,
+}
+
+#[cw_serde]
+pub struct Bid {
+    /// Account that can transfer/send the token
+    pub buyer: String,
+    /// price offer
+    pub offer:u64,
 }
 
 #[cw_serde]
@@ -124,12 +133,23 @@ pub struct ContractInfoResponse {
 
 #[cw_serde]
 pub struct NftInfoResponse<T> {
-    /// Universal resource identifier for this NFT
-    /// Should point to a JSON file that conforms to the ERC721
-    /// Metadata JSON Schema
-    pub token_uri: Option<String>,
-    /// You can add any custom metadata here when you extend codedestate
-    pub extension: T,
+
+        /// Universal resource identifier for this NFT
+        /// Should point to a JSON file that conforms to the ERC721
+        /// Metadata JSON Schema
+        pub token_uri: Option<String>,
+    
+        /// You can add any custom metadata here when you extend codedestate
+        pub extension: T,
+}
+
+#[cw_serde]
+pub struct AuctionInfoResponse {
+    pub islisted:bool,
+    /// Token price for auction
+    pub price:u64,
+    /// bids of buyers for this token
+    pub bids:Vec<Bid>,
 }
 
 #[cw_serde]
@@ -138,6 +158,7 @@ pub struct AllNftInfoResponse<T> {
     pub access: OwnerOfResponse,
     /// Data on the token itself,
     pub info: NftInfoResponse<T>,
+    pub auction: AuctionInfoResponse,
 }
 
 #[cw_serde]

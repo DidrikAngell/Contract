@@ -2,13 +2,13 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use cosmwasm_std::{
-    to_binary, Addr, Binary, BlockInfo, CustomMsg, Deps, Env, Order, StdError, StdResult,
+    to_binary, Addr, Binary, BlockInfo, CustomMsg, Deps, Env, Order, StdError, StdResult
 };
 
 use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, Cw721Query,
     Expiration, NftInfoResponse, NumTokensResponse, OperatorResponse, OperatorsResponse,
-    OwnerOfResponse, TokensResponse,
+    OwnerOfResponse, TokensResponse,AuctionInfoResponse,
 };
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
@@ -16,8 +16,12 @@ use cw_utils::maybe_addr;
 use crate::msg::{MinterResponse, QueryMsg};
 use crate::state::{Approval, Cw721Contract, TokenInfo};
 
-const DEFAULT_LIMIT: u32 = 10;
-const MAX_LIMIT: u32 = 100;
+const DEFAULT_LIMIT: u32 = 4294967295;
+const MAX_LIMIT: u32 = 4294967295;
+
+
+
+
 
 impl<'a, T, C, E, Q> Cw721Query<T> for Cw721Contract<'a, T, C, E, Q>
 where
@@ -41,6 +45,7 @@ where
             token_uri: info.token_uri,
             extension: info.extension,
         })
+
     }
 
     fn owner_of(
@@ -237,6 +242,11 @@ where
                 token_uri: info.token_uri,
                 extension: info.extension,
             },
+            auction: AuctionInfoResponse{
+                islisted:info.islisted,
+                price:info.price,
+                bids:info.bids,
+            }
         })
     }
 }

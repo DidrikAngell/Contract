@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use cosmwasm_std::{Addr, BlockInfo, CustomMsg, StdResult, Storage};
 
-use cw721::{ContractInfoResponse, Cw721, Expiration};
+use cw721::{ContractInfoResponse, Cw721, Expiration, Bid};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 pub struct Cw721Contract<'a, T, C, E, Q>
@@ -131,13 +131,13 @@ impl Approval {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct Bid {
-    /// Account that can transfer/send the token
-    pub buyer: String,
-    /// price offer
-    pub offer:u64,
-}
+// #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+// pub struct Bid {
+//     /// Account that can transfer/send the token
+//     pub buyer: String,
+//     /// price offer
+//     pub offer:u64,
+// }
 
 pub struct TokenIndexes<'a, T>
 where
