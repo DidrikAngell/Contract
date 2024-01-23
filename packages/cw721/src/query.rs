@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cw_utils::Expiration;
-
+use cosmwasm_std::{Addr, Uint128};
 #[cw_serde]
 pub enum Cw721QueryMsg {
     /// Return the owner of the given token, error if token does not exist
@@ -100,6 +100,35 @@ pub struct Bid {
     pub offer:u64,
 }
 
+#[cw_serde] 
+pub struct Landlord {
+    pub denom:String,
+    pub price_per_month: u64,
+    pub refundable_deposit: u64,
+    pub available_period:Vec<String>,    
+}
+
+#[cw_serde]
+pub struct Tenant {
+    pub deposit_amount:u64,
+    pub deposit_denom:String,
+    pub renting_period:Vec<String>,
+}
+
+#[cw_serde]
+pub struct LongTermRental {
+    pub islisted:Option<bool>,
+    pub isreserved:Option<bool>,
+    pub landlord:Option<Landlord>,
+    pub tenant:Option<Tenant>,
+    pub tenant_address:Option<Addr>,
+    pub deposit_amount:Uint128,
+    pub withdrawn_amount:Uint128,
+    pub renting_flag:Option<bool>,
+    pub ejari_flag:Option<bool>,
+}
+
+
 #[cw_serde]
 pub struct ApprovalResponse {
     pub approval: Approval,
@@ -159,6 +188,7 @@ pub struct AllNftInfoResponse<T> {
     /// Data on the token itself,
     pub info: NftInfoResponse<T>,
     pub auction: AuctionInfoResponse,
+    pub mode:Option<String>,
 }
 
 #[cw_serde]

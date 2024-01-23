@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, NftInfoResponse,
-    NumTokensResponse, OperatorResponse, OperatorsResponse, OwnerOfResponse, TokensResponse,
+    NumTokensResponse, OperatorResponse, OperatorsResponse, OwnerOfResponse, TokensResponse,LongTermRental,
 };
 use cosmwasm_std::{Binary, CustomMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_utils::Expiration;
@@ -98,6 +98,8 @@ where
     fn num_tokens(&self, deps: Deps) -> StdResult<NumTokensResponse>;
 
     fn nft_info(&self, deps: Deps, token_id: String) -> StdResult<NftInfoResponse<T>>;
+
+    fn nft_longtermrental_info(&self, deps: Deps, token_id: String) -> StdResult<LongTermRental>;
 
     fn owner_of(
         &self,

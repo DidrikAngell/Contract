@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Uint128};
 use cw721::Expiration;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use schemars::JsonSchema;
@@ -64,11 +64,44 @@ pub enum ExecuteMsg<T, E> {
         extension: T,
     },
 
+    SetListForLongTermRental {
+        token_id:String,
+        islisted:bool,
+        denom:String,
+        price_per_month: u64,
+        refundable_deposit: u64,
+        available_period:Vec<String>,
+    },
+
+    SetReservationForLongTerm {
+        token_id:String,
+        isreserved:bool,
+        deposit_amount:u64,
+        deposit_denom:String,
+        renting_period:Vec<String>,
+    },
+
+    SetEjariForLongTermRental {
+        token_id:String,
+        ejari:bool,
+    },
+
     SetMetadata {
         token_id:String,
         token_uri:String,
     },
 
+    DepositForLongTermRental{
+        token_id: String
+    },
+    FinalizeLongTermRental{
+        token_id: String
+    },
+    WithdrawToLandlord{
+        token_id:String,
+        amount: Uint128,
+        denom: String,
+    },
     SetListing {
         token_id:String,
         islisted:bool,
@@ -145,6 +178,10 @@ pub enum QueryMsg<Q: JsonSchema> {
     /// but directly from the contract
     #[returns(cw721::NftInfoResponse<Q>)]
     NftInfo { token_id: String },
+
+    #[returns(cw721::LongTermRental)]
+    NftInfoLongTermRental { token_id: String },
+
     /// With MetaData Extension.
     /// Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization
     /// for clients

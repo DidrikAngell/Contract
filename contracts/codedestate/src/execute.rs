@@ -2,9 +2,9 @@ use cw_ownable::OwnershipError;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use cosmwasm_std::{Binary, CustomMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, CustomMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128, BankMsg, Coin};
 
-use cw721::{ContractInfoResponse, Cw721Execute, Cw721ReceiveMsg, Bid,Expiration};
+use cw721::{ContractInfoResponse, Cw721Execute, Cw721ReceiveMsg, Bid,Landlord,Tenant, LongTermRental, Expiration};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -59,6 +59,40 @@ where
                 token_id,
                 token_uri,
             } => self.setmetadata(deps, env, info, token_id, token_uri),
+
+            ExecuteMsg::SetListForLongTermRental{
+                token_id,
+                islisted,
+                denom,
+                price_per_month,
+                refundable_deposit,
+                available_period,
+            } => self.setlistforlongtermrental(deps, env, info, token_id, islisted,denom, price_per_month, refundable_deposit, available_period),
+
+            ExecuteMsg::SetReservationForLongTerm{
+                token_id,
+                isreserved,
+                deposit_amount,
+                deposit_denom,
+                renting_period,
+            } => self.setreservationforlongterm(deps,info, token_id, isreserved, deposit_amount,deposit_denom, renting_period),
+
+            ExecuteMsg::SetEjariForLongTermRental{
+                token_id,
+                ejari,
+            } => self.setejariforlongtermrental(deps, env, info, token_id, ejari),
+
+            ExecuteMsg::DepositForLongTermRental {
+                token_id,
+            } => self.depositforlongtermrental(deps, info, token_id),
+
+            ExecuteMsg::WithdrawToLandlord {
+                token_id, amount, denom,
+            } => self.withdrawtolandlord(deps, env, info, token_id, amount, denom),
+
+            ExecuteMsg::FinalizeLongTermRental {
+                token_id,
+            } => self.finalizelongtermrental(deps, env, info, token_id), 
 
             ExecuteMsg::SetListing{
                 token_id,
@@ -125,10 +159,23 @@ where
 
         // cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
+        let longterm_rental = LongTermRental{
+            islisted:None,
+            isreserved:None,
+            landlord:None,
+            tenant:None,
+            tenant_address:None,
+            deposit_amount:Uint128::from(0u64),
+            withdrawn_amount:Uint128::from(0u64),
+            renting_flag:None,
+            ejari_flag:None,
+        };
         // create the token
         let token = TokenInfo {
             owner: deps.api.addr_validate(&owner)?,
             approvals: vec![],
+            mode:None,
+            longterm_rental:longterm_rental,
             islisted:false,
             price:0,
             bids:vec![],
@@ -422,6 +469,202 @@ where
 
         Ok(Response::new()
             .add_attribute("action", "setlisting")
+            .add_attribute("sender", info.sender)
+            .add_attribute("token_id", token_id))
+    }
+
+
+    pub fn setlistforlongtermrental(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        token_id:String,
+        islisted:bool,
+        denom:String,
+        price_per_month: u64,
+        refundable_deposit: u64,
+        available_period:Vec<String>,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        // ensure we have permissions
+        self.check_can_send(deps.as_ref(), &env, &info, &token)?;
+
+        let landlord = Landlord{
+            denom:denom,
+            price_per_month:price_per_month,
+            refundable_deposit:refundable_deposit,
+            available_period:available_period
+        };
+
+        token.longterm_rental.islisted = Some(islisted);
+        token.longterm_rental.landlord = Some(landlord);
+        self.tokens.save(deps.storage, &token_id, &token)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "setlistforlongtermrental")
+            .add_attribute("sender", info.sender)
+            .add_attribute("token_id", token_id))
+    }
+
+
+    pub fn setreservationforlongterm(
+        &self,
+        deps: DepsMut,
+        // env: Env,
+        info: MessageInfo,
+        token_id:String,
+        isreserved:bool,
+        deposit_amount:u64,
+        deposit_denom:String,
+        renting_period:Vec<String>,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        // let sent_amount = info.funds[0].amount;
+        let tenant = Tenant{
+            deposit_amount:deposit_amount,
+            deposit_denom:deposit_denom,
+            renting_period:renting_period,  
+        };
+        token.longterm_rental.isreserved = Some(isreserved);
+        token.longterm_rental.tenant_address = Some(info.sender.clone());
+        token.longterm_rental.tenant = Some(tenant);
+        self.tokens.save(deps.storage, &token_id, &token)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "setreservationforlongterm")
+            .add_attribute("sender", info.sender)
+            .add_attribute("token_id", token_id))
+    }
+
+
+    pub fn cancelreservationforlongterm(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        token_id:String,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        let tenant_address = token.longterm_rental.tenant_address.clone();
+        match tenant_address {
+            Some(address) => {
+                if info.sender != address {
+                    return Err(ContractError::NotReserved {});
+                }
+            }
+            None => {
+                return Err(ContractError::NotReserved {});
+            }
+        }
+        token.longterm_rental.isreserved = None;
+        token.longterm_rental.tenant_address = None;
+        token.longterm_rental.tenant = None;
+        self.tokens.save(deps.storage, &token_id, &token)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "cancelreservationforlongterm")
+            .add_attribute("sender", info.sender)
+            .add_attribute("token_id", token_id))
+    }
+
+
+    pub fn setejariforlongtermrental(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        token_id:String,
+        ejari:bool,
+    ) -> Result<Response<C>, ContractError>{
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        self.check_can_send(deps.as_ref(), &env, &info, &token)?;
+        token.longterm_rental.ejari_flag = Some(ejari);
+        Ok(Response::new()
+        .add_attribute("action", "setejariforlongtermrental")
+        .add_attribute("sender", info.sender)
+        .add_attribute("token_id", token_id))
+    }
+
+    pub fn depositforlongtermrental(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        token_id:String,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        let _sent_amount = info.funds[0].amount;
+        let tenant_address = token.longterm_rental.tenant_address.clone();
+        match tenant_address {
+            Some(address) => {
+                if info.sender != address {
+                    return Err(ContractError::NotReserved {});
+                }
+            }
+            None => {
+                return Err(ContractError::NotReserved {});
+            }
+        }
+        token.longterm_rental.deposit_amount += _sent_amount;
+        self.tokens.save(deps.storage, &token_id, &token)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "depositforlongtermrental")
+            .add_attribute("sender", info.sender)
+            .add_attribute("token_id", token_id))
+    }
+
+    pub fn withdrawtolandlord(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        token_id:String,
+        amount: Uint128,
+        denom: String,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        self.check_can_send(deps.as_ref(), &env, &info, &token)?;
+
+        if token.longterm_rental.deposit_amount < token.longterm_rental.withdrawn_amount + amount {
+            return Err(ContractError::UnavailableAmount {});
+        }
+
+        if !token.longterm_rental.ejari_flag.is_some() {
+            return Err(ContractError::EjariNotConfirmed {});
+        }
+
+        token.longterm_rental.withdrawn_amount += amount;
+        Ok(Response::new()
+        .add_attribute("action", "withdrawtolandlord")
+        .add_message(BankMsg::Send {
+            to_address: token.owner.into_string(),
+            amount: vec![Coin{denom, amount}]
+        })
+    )
+    }
+
+    pub fn finalizelongtermrental(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        token_id:String,
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+        self.check_can_send(deps.as_ref(), &env, &info, &token)?;
+
+        token.longterm_rental.isreserved = None;
+        token.longterm_rental.tenant = None;
+        token.longterm_rental.tenant_address = None;
+        token.longterm_rental.deposit_amount = Uint128::from(0u64);
+        token.longterm_rental.withdrawn_amount = Uint128::from(0u64);
+        token.longterm_rental.renting_flag = None;
+        token.longterm_rental.ejari_flag = None;
+        self.tokens.save(deps.storage, &token_id, &token)?;
+
+        
+        Ok(Response::new()
+            .add_attribute("action", "finalizelongtermrental")
             .add_attribute("sender", info.sender)
             .add_attribute("token_id", token_id))
     }

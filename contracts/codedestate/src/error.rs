@@ -16,6 +16,15 @@ pub enum ContractError {
     #[error("token_id already claimed")]
     Claimed {},
 
+    #[error("cannot withdraw such amount")]
+    UnavailableAmount {},
+
+    #[error("ejari not verified")]
+    EjariNotConfirmed {},
+
+    #[error("not reservated")]
+    NotReserved {},
+
     #[error("Cannot set approval that is already expired")]
     Expired {},
 

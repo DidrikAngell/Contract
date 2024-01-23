@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use cosmwasm_std::{Addr, BlockInfo, CustomMsg, StdResult, Storage};
 
-use cw721::{ContractInfoResponse, Cw721, Expiration, Bid};
+use cw721::{ContractInfoResponse, Cw721, Expiration, Bid, LongTermRental};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 pub struct Cw721Contract<'a, T, C, E, Q>
@@ -102,12 +102,27 @@ pub struct TokenInfo<T> {
     pub owner: Addr,
     /// Approvals are stored here, as we clear them all upon transfer and cannot accumulate much
     pub approvals: Vec<Approval>,
+    
+    /// determines the action 
+    pub mode:Option<String>,
+
+    /// long term rental
+
+    pub longterm_rental:LongTermRental,
+
+
+    
+    
     /// This represents if this token is listed for auction or not
     pub islisted:bool,
     /// Token price for auction
     pub price:u64,
     /// bids of buyers for this token
     pub bids:Vec<Bid>,
+
+
+
+
     /// Universal resource identifier for this NFT
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema

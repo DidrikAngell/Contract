@@ -8,7 +8,7 @@ use cosmwasm_std::{
 use cw721::{
     AllNftInfoResponse, ApprovalResponse, ApprovalsResponse, ContractInfoResponse, Cw721Query,
     Expiration, NftInfoResponse, NumTokensResponse, OperatorResponse, OperatorsResponse,
-    OwnerOfResponse, TokensResponse,AuctionInfoResponse,
+    OwnerOfResponse, TokensResponse,AuctionInfoResponse, LongTermRental,
 };
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
@@ -46,6 +46,11 @@ where
             extension: info.extension,
         })
 
+    }
+
+    fn nft_longtermrental_info(&self, deps: Deps, token_id: String) -> StdResult<LongTermRental> {
+        let info = self.tokens.load(deps.storage, &token_id)?;
+        Ok(info.longterm_rental)
     }
 
     fn owner_of(
@@ -246,7 +251,8 @@ where
                 islisted:info.islisted,
                 price:info.price,
                 bids:info.bids,
-            }
+            },
+            mode: info.mode,
         })
     }
 }
@@ -263,6 +269,7 @@ where
             QueryMsg::Minter {} => to_binary(&self.minter(deps)?),
             QueryMsg::ContractInfo {} => to_binary(&self.contract_info(deps)?),
             QueryMsg::NftInfo { token_id } => to_binary(&self.nft_info(deps, token_id)?),
+            QueryMsg::NftInfoLongTermRental { token_id } => to_binary(&self.nft_longtermrental_info(deps, token_id)?),
             QueryMsg::OwnerOf {
                 token_id,
                 include_expired,
